@@ -1,0 +1,105 @@
+name: Custom RustDesk (Sciter x64) - orbitalerp
+
+# Cliente RustDesk personalizado para el servidor privado orbitalerp.es.
+# Variante Sciter (UI clasica), 64 bits. Se lanza a mano desde la pestana Actions
+# o con `gh workflow run`.
+
+on:
+  workflow_dispatch:
+
+env:
+  # Versiones tomadas del CI oficial de RustDesk (rama master, v1.4.8)
+  SCITER_RUST_VERSION: "1.75"
+  LLVM_VERSION: "15.0.6"
+  VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  # ----- TU SERVIDOR PRIVADO (se hornea en el binario) -----
+  RUSTDESK_HOST: "orbitalerp.es"
+  RUSTDESK_KEY: "FSL0Dk1PKexPg+zLB4sZcThSbtIfKfP86BdOo6ClHSc="
+
+jobs:
+  build-sciter-x64:
+    name: Sciter x64 (windows-2022)
+    runs-on: windows-2022
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      # ----- Paso clave: hornear servidor + key en config.rs (submodulo hbb_common) -----
+      - name: Bake private server config into config.rs
+        shell: bash
+        run: |
+          set -e
+          CFG=libs/hbb_common/src/config.rs
+          echo "=== Antes ==="
+          grep -nE 'RENDEZVOUS_SERVERS|RS_PUB_KEY' "$CFG" || true
+          sed -i -E "s#pub const RENDEZVOUS_SERVERS:.*#pub const RENDEZVOUS_SERVERS: \&[\&str] = \&[\"${RUSTDESK_HOST}\"];#" "$CFG"
+          sed -i -E "s#pub const RS_PUB_KEY:.*#pub const RS_PUB_KEY: \&str = \"${RUSTDESK_KEY}\";#" "$CFG"
+          echo "=== Despues ==="
+          grep -nE 'RENDEZVOUS_SERVERS|RS_PUB_KEY' "$CFG"
+          # Verificacion dura: si no quedo inyectado, abortamos (no queremos un cliente
+          # apuntando por error a los servidores publicos de rustdesk.com).
+          grep -q "${RUSTDESK_HOST}" "$CFG" || { echo "ERROR: host NO inyectado"; exit 1; }
+          grep -q "${RUSTDESK_KEY}"  "$CFG" || { echo "ERROR: key NO inyectada"; exit 1; }
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
+        with:
+          version: ${{ env.LLVM_VERSION }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.SCITER_RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: windows-2022-sciter-x64
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies
+        env:
+          VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+        shell: bash
+        run: |
+          if ! $VCPKG_ROOT/vcpkg install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"; echo "======"; cat "$_1"; echo "======"; echo ""
+            done
+            exit 1
+          fi
+
+      - name: Build rustdesk (sciter x64)
+        shell: bash
+        run: |
+          set -e
+          python3 res/inline-sciter.py
+          cargo build --locked --features inline,vram,hwcodec --release --bins
+          mkdir -p ./Release
+          mv ./target/release/rustdesk.exe ./Release/rustdesk.exe
+          # sciter.dll de 64 bits (runtime de la UI clasica)
+          curl -fLJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x64/sciter.dll
+          ls -l ./Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rustdesk-custom-sciter-windows-x64
+          path: Release
