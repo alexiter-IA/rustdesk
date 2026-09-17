@@ -145,7 +145,8 @@ jobs:
         run: |
           flutter doctor -v
           flutter precache --windows
-          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          function Get-WithRetry($uri, $out) { for ($i=1; $i -le 5; $i++) { try { Invoke-WebRequest -Uri $uri -OutFile $out -UseBasicParsing; return } catch { Write-Host "descarga fallida ($i/5): $uri -> $($_.Exception.Message)"; Start-Sleep -Seconds (15*$i) } }; throw "No se pudo descargar $uri tras 5 intentos" }
+          Get-WithRetry "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" "windows-x64-release.zip"
           Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
           mv -Force windows-x64-release/*  C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
 
@@ -191,7 +192,8 @@ jobs:
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           mv ./flutter/build/windows/x64/runner/Release ./rustdesk
           # Driver de monitor virtual (igual que el build oficial)
-          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          function Get-WithRetry($uri, $out) { for ($i=1; $i -le 5; $i++) { try { Invoke-WebRequest -Uri $uri -OutFile $out -UseBasicParsing; return } catch { Write-Host "descarga fallida ($i/5): $uri -> $($_.Exception.Message)"; Start-Sleep -Seconds (15*$i) } }; throw "No se pudo descargar $uri tras 5 intentos" }
+          Get-WithRetry "https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip" "usbmmidd_v2.zip"
           Expand-Archive usbmmidd_v2.zip -DestinationPath .
           Remove-Item -Path usbmmidd_v2\Win32 -Recurse
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
