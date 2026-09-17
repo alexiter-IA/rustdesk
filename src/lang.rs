@@ -222,12 +222,15 @@ pub fn translate_locale(name: String, locale: &str) -> String {
         if let Some(value) = placeholder_value.as_ref() {
             s = s.replace("{}", &value);
         }
-        if !crate::is_rustdesk() {
+        // Orbital branding: show "Orbital RD" instead of "RustDesk" in user-facing UI strings,
+        // WITHOUT touching the internal APP_NAME (config dir, service name, etc.).
+        // "powered_by_me" ("Con tecnología de RustDesk") is deliberately kept as attribution.
+        if true {
             if s.contains("RustDesk")
                 && !name.starts_with("upgrade_rustdesk_server_pro")
                 && name != "powered_by_me"
             {
-                let app_name = crate::get_app_name();
+                let app_name = "Orbital RD".to_string();
                 if !app_name.contains("RustDesk") {
                     s = s.replace("RustDesk", &app_name);
                 } else {

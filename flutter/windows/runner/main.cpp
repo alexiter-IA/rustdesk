@@ -73,6 +73,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   // Uri links dispatch
+  app_name = L"Orbital Remote Desktop"; // Orbital branding: window title + single-instance lookup
   HWND hwnd = ::FindWindowW(getWindowClassName(), app_name.c_str());
   if (hwnd != NULL) {
     // Allow multiple flutter instances when being executed by parameters

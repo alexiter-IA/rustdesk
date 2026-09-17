@@ -3036,7 +3036,7 @@ int versionCmp(String v1, String v2) {
 }
 
 String getWindowName({WindowType? overrideType}) {
-  final name = bind.mainGetAppNameSync();
+  final name = "Orbital Remote Desktop"; // Orbital branding (window titles)
   switch (overrideType ?? kWindowType) {
     case WindowType.Main:
       return name;
