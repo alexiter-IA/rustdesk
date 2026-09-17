@@ -1562,7 +1562,11 @@ async fn check_id(
                                 return "Too frequent";
                             }
                             Ok(register_pk_response::Result::NOT_SUPPORT) => {
-                                return "server_not_support";
+                                // Orbital: el hbbs OSS responde NOT_SUPPORT a la comprobacion previa por TCP,
+                                // pero SI acepta la nueva ID en el registro normal por UDP (RegisterPk).
+                                // Se permite el cambio; si la ID estuviera ocupada, el registro UDP
+                                // devolvera UUID_MISMATCH y el cliente quedara "No listo".
+                                ok = true;
                             }
                             Ok(register_pk_response::Result::SERVER_ERROR) => {
                                 return "Server error";
