@@ -2031,7 +2031,13 @@ pub fn create_symmetric_key_msg(their_pk_b: [u8; 32]) -> (Bytes, Bytes, secretbo
 
 #[inline]
 pub fn using_public_server() -> bool {
-    crate::get_custom_rendezvous_server(get_option("custom-rendezvous-server")).is_empty()
+    // Orbital: este cliente lleva SIEMPRE horneado el servidor privado
+    // (RENDEZVOUS_SERVERS/RS_PUB_KEY en hbb_common), asi que nunca usa los
+    // servidores publicos de RustDesk. La comprobacion original solo mira si el
+    // usuario configuro un servidor A MANO, por lo que daba un falso positivo:
+    // mostraba el aviso "configure su propio servidor" y ocultaba los ajustes
+    // reservados a instalaciones autoalojadas.
+    false
 }
 
 pub struct ThrottledInterval {
