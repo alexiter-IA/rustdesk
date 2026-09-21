@@ -1828,7 +1828,6 @@ fn get_uninstall(kill_self: bool, uninstall_printer: bool) -> String {
     ",
         before_uninstall=get_before_uninstall(kill_self),
         uninstall_amyuni_idd=get_uninstall_amyuni_idd(),
-        app_name = crate::get_app_name(),
     )
 }
 
@@ -3673,7 +3672,6 @@ Set oLink = oWS.CreateShortcut(sLinkFile)
     {shortcut_icon_location}
 oLink.Save
         ",
-            app_name = crate::get_app_name(),
         ),
         "vbs",
         "tray_shortcut",
@@ -3708,7 +3706,7 @@ fn get_create_service(exe: &str) -> String {
     if stop {
         format!("
 if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\Orbital Remote Desktop Tray.lnk\" del /f /q \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\Orbital Remote Desktop Tray.lnk\"
-", app_name = crate::get_app_name())
+")
     } else {
         format!("
 sc create {app_name} binpath= \"\\\"{exe}\\\" --service\" start= auto DisplayName= \"{app_name} Service\"
