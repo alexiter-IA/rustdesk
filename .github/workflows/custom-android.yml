@@ -6,6 +6,15 @@ name: Custom Orbital RD (Android arm64)
 
 on:
   workflow_dispatch:
+    inputs:
+      variante:
+        description: "tecnico = cliente completo (Alex) | cliente = solo recibir asistencia"
+        type: choice
+        required: true
+        default: cliente
+        options:
+          - cliente
+          - tecnico
 
 env:
   RUST_VERSION: "1.75"
@@ -51,6 +60,17 @@ jobs:
         with:
           path: /tmp/flutter_rust_bridge
           key: bridge-3.22.3
+      # Variante "cliente": modo SOLO ENTRANTE (solo puede RECIBIR asistencia).
+      - name: Forzar modo solo entrante (variante cliente)
+        if: ${{ inputs.variante == 'cliente' }}
+        shell: bash
+        run: |
+          set -e
+          CFG=libs/hbb_common/src/config.rs
+          sed -i -E "s#^pub fn is_incoming_only\(\) -> bool \{#pub fn is_incoming_only() -> bool { return true; // Orbital: variante cliente#" "$CFG"
+          grep -q "Orbital: variante cliente" "$CFG" || { echo "ERROR: no se activo el modo solo entrante"; exit 1; }
+          echo "modo solo entrante activado"
+
       - name: Install flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
@@ -235,5 +255,5 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: orbital-rd-android-aarch64-apk
+          name: orbital-rd-android-aarch64-apk${{ inputs.variante == 'cliente' && '-cliente' || '-tecnico' }}
           path: ${{ steps.sign.outputs.signedReleaseFile }}
