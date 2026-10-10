@@ -190,6 +190,12 @@ jobs:
             --volume "/opt/artifacts:/opt/artifacts"
           shell: /bin/bash
           install: |
+            # Orbital: los runners de GitHub (Azure) no llegan de forma fiable a
+            # archive.ubuntu.com (oct-2026: 35 min de "Connection failed"). Usamos
+            # la replica de Azure, que esta en su misma red, y reintentos de apt.
+            sed -i -e 's#http://archive.ubuntu.com#http://azure.archive.ubuntu.com#g' \
+                   -e 's#http://security.ubuntu.com#http://azure.archive.ubuntu.com#g' /etc/apt/sources.list
+            echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
             apt-get update -y
             apt-get install -y \
                build-essential clang cmake curl gcc git g++ \
